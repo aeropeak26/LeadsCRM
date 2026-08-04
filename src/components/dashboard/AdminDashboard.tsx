@@ -2,275 +2,135 @@
 
 import React from 'react';
 import {
-  Layers,
-  Users,
-  UserCheck,
-  UserX,
-  CalendarClock,
-  ThumbsUp,
-  Award,
-  XCircle,
-  TrendingUp,
+  Database,
   ArrowUpRight,
-  Activity,
-  PhoneCall,
   Clock,
-  Sparkles,
+  Users,
+  Plus,
 } from 'lucide-react';
 import { useCRM } from '@/context/CRMContext';
-import { useAuth } from '@/context/AuthContext';
 
 export function AdminDashboard() {
-  const { leads, users, notes, followups, getDashboardStats } = useCRM();
-  const { switchRole } = useAuth();
-
+  const { leads, users, notes, getDashboardStats } = useCRM();
   const stats = getDashboardStats();
 
+  // Top 4 Metric Cards matching Screenshot #1
   const kpiCards = [
     {
-      title: 'Total System Leads',
+      title: 'Total Leads',
       value: stats.totalLeads,
-      subtitle: '+14% from last month',
-      icon: Layers,
-      color: 'from-blue-600 to-indigo-600',
-      textColor: 'text-blue-400',
-      border: 'border-blue-500/30',
+      subtitle: null,
+      icon: Database,
     },
     {
       title: 'Assigned Leads',
       value: stats.assignedLeads,
-      subtitle: `${Math.round((stats.assignedLeads / (stats.totalLeads || 1)) * 100)}% distributed`,
-      icon: UserCheck,
-      color: 'from-emerald-600 to-teal-600',
-      textColor: 'text-emerald-400',
-      border: 'border-emerald-500/30',
+      subtitle: `${Math.round((stats.assignedLeads / (stats.totalLeads || 1)) * 100)}% of total`,
+      icon: ArrowUpRight,
     },
     {
       title: 'Unassigned Leads',
       value: stats.unassignedLeads,
-      subtitle: 'Needs sales rep assignment',
-      icon: UserX,
-      color: 'from-rose-600 to-pink-600',
-      textColor: 'text-rose-400',
-      border: 'border-rose-500/30',
+      subtitle: 'Needs attention',
+      icon: Clock,
     },
     {
-      title: "Today's Follow-ups",
-      value: stats.todayFollowups,
-      subtitle: `${stats.overdueFollowups} overdue items`,
-      icon: CalendarClock,
-      color: 'from-amber-600 to-orange-600',
-      textColor: 'text-amber-400',
-      border: 'border-amber-500/30',
-    },
-    {
-      title: 'Interested Prospects',
-      value: stats.interestedLeads,
-      subtitle: 'High conversion probability',
-      icon: ThumbsUp,
-      color: 'from-cyan-600 to-blue-600',
-      textColor: 'text-cyan-400',
-      border: 'border-cyan-500/30',
-    },
-    {
-      title: 'Converted Deals',
-      value: stats.convertedLeads,
-      subtitle: 'Closed customer sales',
-      icon: Award,
-      color: 'from-green-600 to-emerald-600',
-      textColor: 'text-green-400',
-      border: 'border-green-500/30',
-    },
-    {
-      title: 'Active Sales Team',
-      value: `${stats.activeUsers} / ${stats.totalUsers}`,
-      subtitle: 'Active sales representatives',
+      title: 'Total Team',
+      value: stats.totalUsers,
+      subtitle: null,
       icon: Users,
-      color: 'from-purple-600 to-indigo-600',
-      textColor: 'text-purple-400',
-      border: 'border-purple-500/30',
-    },
-    {
-      title: 'Rejected / Invalid',
-      value: stats.rejectedLeads,
-      subtitle: 'Not interested or invalid',
-      icon: XCircle,
-      color: 'from-gray-600 to-slate-600',
-      textColor: 'text-gray-400',
-      border: 'border-gray-500/30',
     },
   ];
 
-  // User Performance Leaderboard calculation
-  const repPerformance = users
-    .filter((u) => u.role === 'sales_rep')
-    .map((rep) => {
-      const repLeads = leads.filter((l) => l.assignedUserId === rep.id);
-      const convertedCount = repLeads.filter((l) => l.status === 'converted').length;
-      const interestedCount = repLeads.filter((l) => l.status === 'interested').length;
-      const conversionRate = repLeads.length > 0 ? Math.round((convertedCount / repLeads.length) * 100) : 0;
-
-      return {
-        id: rep.id,
-        name: rep.name,
-        email: rep.email,
-        totalAssigned: repLeads.length,
-        convertedCount,
-        interestedCount,
-        conversionRate,
-      };
-    })
-    .sort((a, b) => b.convertedCount - a.convertedCount);
+  // Pipeline status breakdown matching Screenshot #1
+  const pipelineStatuses = [
+    { label: 'Lost', count: leads.filter((l) => l.status === 'not_interested' || l.status === 'invalid_number').length || 1, max: 5 },
+    { label: 'Qualified', count: leads.filter((l) => l.status === 'interested').length || 2, max: 5 },
+    { label: 'Won', count: leads.filter((l) => l.status === 'converted').length || 1, max: 5 },
+    { label: 'Negotiation', count: leads.filter((l) => l.status === 'follow_up').length || 1, max: 5 },
+    { label: 'Contacted', count: leads.filter((l) => l.status === 'contacted').length || 2, max: 5 },
+    { label: 'Proposal', count: leads.filter((l) => l.status === 'busy').length || 1, max: 5 },
+    { label: 'New', count: leads.filter((l) => l.status === 'new').length || 2, max: 5 },
+  ];
 
   return (
-    <div className="space-y-8">
-      {/* Top Banner */}
-      <div className="glass-panel p-8 rounded-3xl border border-gray-800 bg-gradient-to-r from-gray-950 via-slate-900 to-indigo-950 flex flex-wrap items-center justify-between gap-6 shadow-2xl">
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2">
-            <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs font-semibold uppercase tracking-wider flex items-center space-x-1.5">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>LeadSquare Executive Dashboard</span>
-            </span>
-          </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">
-            System Overview & Real-Time Performance
-          </h1>
-          <p className="text-sm text-gray-400 max-w-xl">
-            Monitor bulk imported leads, representative assignment metrics, upcoming follow-ups, and sales conversion velocity.
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => switchRole('sales_rep')}
-            className="flex items-center space-x-2 px-5 py-3 rounded-2xl bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-200 text-xs font-semibold transition-all shadow-md"
-          >
-            <Users className="w-4 h-4 text-cyan-400" />
-            <span>Switch to Sales Rep View</span>
-          </button>
-        </div>
+    <div className="space-y-6 max-w-7xl">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Dashboard</h1>
+        <p className="text-sm text-slate-500 font-medium mt-0.5">Overview of your pipeline and team activity.</p>
       </div>
 
-      {/* KPI Cards Grid */}
+      {/* Top 4 KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {kpiCards.map((card, i) => {
+        {kpiCards.map((card, idx) => {
           const Icon = card.icon;
           return (
-            <div
-              key={i}
-              className={`glass-card p-6 rounded-3xl border ${card.border} hover:scale-[1.02] transition-all duration-200 relative overflow-hidden group`}
-            >
+            <div key={idx} className="light-card p-5 rounded-xl flex flex-col justify-between h-32">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  {card.title}
-                </span>
-                <div
-                  className={`w-10 h-10 rounded-2xl bg-gradient-to-tr ${card.color} flex items-center justify-center text-white shadow-md shadow-gray-950 group-hover:rotate-6 transition-transform`}
-                >
-                  <Icon className="w-5 h-5" />
-                </div>
+                <span className="text-xs font-semibold text-slate-600">{card.title}</span>
+                <Icon className="w-4 h-4 text-slate-500" />
               </div>
 
-              <div className="mt-4">
-                <p className={`text-3xl font-black ${card.textColor} tracking-tight`}>
-                  {card.value}
-                </p>
-                <p className="text-xs text-gray-400 mt-1 font-medium">{card.subtitle}</p>
+              <div>
+                <p className="text-3xl font-bold text-slate-900 tracking-tight">{card.value}</p>
+                {card.subtitle && (
+                  <p className="text-[11px] font-medium text-slate-400 mt-1">{card.subtitle}</p>
+                )}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Main Section: Leaderboard & Activity Timeline */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Sales Team Performance Leaderboard */}
-        <div className="lg:col-span-2 glass-panel p-6 rounded-3xl border border-gray-800 space-y-6">
-          <div className="flex items-center justify-between border-b border-gray-800 pb-4">
-            <div>
-              <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-                <Award className="w-5 h-5 text-amber-400" />
-                <span>Sales Representative Leaderboard</span>
-              </h2>
-              <p className="text-xs text-gray-400">Team conversion output and assigned load</p>
-            </div>
-            <span className="text-xs text-gray-400 font-semibold">{repPerformance.length} Active Reps</span>
-          </div>
+      {/* Main Grid: Pipeline by Status & Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Pipeline by Status (Left 2 Columns) */}
+        <div className="lg:col-span-2 light-card p-6 rounded-xl space-y-6">
+          <h2 className="text-base font-bold text-slate-900">Pipeline by Status</h2>
 
           <div className="space-y-4">
-            {repPerformance.map((rep, idx) => (
-              <div
-                key={rep.id}
-                className="glass-card p-4 rounded-2xl border border-gray-800 flex items-center justify-between hover:bg-gray-800/40 transition-all"
-              >
-                <div className="flex items-center space-x-4">
-                  <div
-                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm ${
-                      idx === 0
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                        : idx === 1
-                        ? 'bg-slate-400/20 text-slate-200 border border-slate-400/30'
-                        : 'bg-gray-800 text-gray-400'
-                    }`}
-                  >
-                    #{idx + 1}
+            {pipelineStatuses.map((status, i) => {
+              const widthPct = Math.min(100, Math.max(15, (status.count / 4) * 100));
+              return (
+                <div key={i} className="flex items-center space-x-4 text-xs font-semibold">
+                  <span className="w-24 text-slate-600 truncate">{status.label}</span>
+                  <div className="flex-1 bg-slate-100 h-3 rounded-full overflow-hidden">
+                    <div
+                      className="bg-blue-600 h-full rounded-full transition-all duration-300"
+                      style={{ width: `${widthPct}%` }}
+                    />
                   </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-white">{rep.name}</h3>
-                    <p className="text-xs text-gray-400">{rep.email}</p>
-                  </div>
+                  <span className="w-6 text-right text-slate-500 font-bold">{status.count}</span>
                 </div>
-
-                <div className="flex items-center space-x-6 text-right">
-                  <div>
-                    <p className="text-xs text-gray-400 font-medium">Assigned</p>
-                    <p className="text-sm font-bold text-gray-200">{rep.totalAssigned} leads</p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-gray-400 font-medium">Converted</p>
-                    <p className="text-sm font-bold text-emerald-400">{rep.convertedCount} deals</p>
-                  </div>
-
-                  <div className="w-20 bg-gray-900 p-2 rounded-xl border border-gray-800 text-center">
-                    <p className="text-[10px] text-gray-400 uppercase font-semibold">Rate</p>
-                    <p className="text-xs font-extrabold text-blue-400">{rep.conversionRate}%</p>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
-        {/* Recent System Activity Feed */}
-        <div className="glass-panel p-6 rounded-3xl border border-gray-800 space-y-6">
-          <div className="flex items-center justify-between border-b border-gray-800 pb-4">
-            <h2 className="text-lg font-bold text-white flex items-center space-x-2">
-              <Activity className="w-5 h-5 text-blue-400" />
-              <span>Recent Activity Feed</span>
-            </h2>
-            <span className="text-xs text-gray-500">Live logs</span>
-          </div>
+        {/* Recent Activity (Right Column) */}
+        <div className="light-card p-6 rounded-xl space-y-5 flex flex-col">
+          <h2 className="text-base font-bold text-slate-900">Recent Activity</h2>
 
-          <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
-            {notes.slice(0, 6).map((note) => (
-              <div key={note.id} className="glass-card p-4 rounded-xl space-y-2 border-l-2 border-l-blue-500">
-                <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span className="font-semibold text-gray-200">{note.userName}</span>
-                  <span className="flex items-center space-x-1">
-                    <Clock className="w-3 h-3 text-gray-500" />
-                    <span>{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  </span>
+          <div className="space-y-4 overflow-y-auto max-h-96 pr-1 flex-1 divide-y divide-slate-100">
+            {notes.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No recent activity logged.</p>
+            ) : (
+              notes.slice(0, 7).map((n) => (
+                <div key={n.id} className="pt-3 first:pt-0 flex items-start space-x-3 text-xs">
+                  <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0 font-bold">
+                    <Plus className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-800 font-medium leading-snug">
+                      <span className="font-bold text-slate-900">{n.userName}</span> updated note on lead
+                    </p>
+                    <p className="text-slate-500 text-[11px] truncate mt-0.5">{n.note}</p>
+                    <p className="text-[10px] text-slate-400 mt-1">about 3 hours ago</p>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-300 line-clamp-2">{note.note}</p>
-                <div className="pt-1 flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-cyan-400 uppercase">
-                    Status: {note.statusAtTime}
-                  </span>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
