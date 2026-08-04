@@ -24,8 +24,8 @@ export function Sidebar() {
   const navItems = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard, adminOnly: false },
     { name: 'Leads', href: '/leads', icon: Database, adminOnly: false },
-    { name: 'Users', href: '/users', icon: Users, adminOnly: false },
-    { name: 'Import', href: '/import', icon: Upload, adminOnly: false },
+    { name: 'Users', href: '/users', icon: Users, adminOnly: true },
+    { name: 'Import', href: '/import', icon: Upload, adminOnly: true },
     { name: 'Follow-ups', href: '/followups', icon: CalendarClock, adminOnly: false },
     { name: 'Reports', href: '/reports', icon: BarChart3, adminOnly: true },
     { name: 'Settings', href: '/settings', icon: Settings, adminOnly: true },
@@ -68,7 +68,7 @@ export function Sidebar() {
         <div className="min-w-0 pr-2">
           <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Logged in as</p>
           <p className="text-xs font-bold text-white truncate">
-            {currentUser?.name || 'Admin'} ({isAdmin ? 'Admin' : 'Sales Rep'})
+            {currentUser?.name || 'User'} ({isAdmin ? 'Admin' : 'Sales Rep'})
           </p>
         </div>
 

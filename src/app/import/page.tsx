@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Upload, CheckCircle2, ArrowRight } from 'lucide-react';
 import { parseExcelFile } from '@/lib/utils/excel';
 import { ParsedLeadRecord } from '@/lib/types';
 import { useCRM } from '@/context/CRMContext';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ImportPage() {
+  const { isAdmin } = useAuth();
+  const router = useRouter();
   const { leads, users, importExcelRecords } = useCRM();
 
   const [file, setFile] = useState<File | null>(null);
@@ -22,6 +26,14 @@ export default function ImportPage() {
   } | null>(null);
 
   const [isSuccess, setIsSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      router.push('/');
+    }
+  }, [isAdmin, router]);
+
+  if (!isAdmin) return null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
