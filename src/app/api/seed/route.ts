@@ -1,65 +1,31 @@
-import { NextResponse } from 'next';
-import { connectToDatabase } from '@/lib/db/mongodb';
-import User from '@/models/User';
-import Lead from '@/models/Lead';
-import Followup from '@/models/Followup';
-import LeadNote from '@/models/LeadNote';
-import { INITIAL_USERS, INITIAL_LEADS, INITIAL_FOLLOWUPS, INITIAL_NOTES } from '@/lib/storage/mockData';
+import { NextResponse } from 'next/server';
+import connectToDatabase from '@/lib/mongoose';
+import User from '@/lib/models/User';
+import Lead from '@/lib/models/Lead';
+import Followup from '@/lib/models/Followup';
+import LeadNote from '@/lib/models/LeadNote';
+import SystemSettings from '@/lib/models/SystemSettings';
+import { INITIAL_USERS, INITIAL_LEADS, INITIAL_FOLLOWUPS, INITIAL_NOTES, DEFAULT_SETTINGS } from '@/lib/storage/mockData';
 
 export async function GET() {
   try {
-    const conn = await connectToDatabase();
-    if (!conn) {
-      return NextResponse.json({
-        status: 'hybrid_local',
-        message: 'Running in Local Storage Mode. Add MONGODB_URI in .env.local to persist directly into MongoDB cloud database.',
-      });
-    }
+    await connectToDatabase();
 
-    // Seed Users
-    for (const u of INITIAL_USERS) {
-      await User.updateOne(
-        { email: u.email },
-        {
-          $set: {
-            name: u.name,
-            email: u.email,
-            phone: u.phone,
-            role: u.role,
-            status: u.status,
-          },
-        },
-        { upsert: true }
-      );
-    }
+    // Clear existing data
+    await Promise.all([
+      User.deleteMany({}),
+      Lead.deleteMany({}),
+      Followup.deleteMany({}),
+      LeadNote.deleteMany({}),
+      SystemSettings.deleteMany({}),
+    ]);
 
-    // Fetch created/upserted admin & dev users
-    const adminDoc = await User.findOne({ email: 'info@aeropeak.tech' });
-    const devDoc = await User.findOne({ email: 'devatharshini@gmail.com' });
-
-    // Seed Sample Leads into MongoDB
-    for (const l of INITIAL_LEADS) {
-      const assignedId = l.assignedUserId === 'u-dev-1' ? devDoc?._id : (l.assignedUserId === 'u-admin-1' ? adminDoc?._id : null);
-      await Lead.updateOne(
-        { phone: l.phone },
-        {
-          $set: {
-            name: l.name,
-            phone: l.phone,
-            email: l.email,
-            company: l.company,
-            city: l.city,
-            state: l.state,
-            address: l.address,
-            remarks: l.remarks,
-            assignedUserId: assignedId,
-            status: l.status,
-            followupDate: l.followupDate ? new Date(l.followupDate) : null,
-          },
-        },
-        { upsert: true }
-      );
-    }
+    // Insert new mock data
+    await User.insertMany(INITIAL_USERS.map(u => ({ ...u, _id: u.id })));
+    await Lead.insertMany(INITIAL_LEADS.map(l => ({ ...l, _id: l.id })));
+    await Followup.insertMany(INITIAL_FOLLOWUPS.map(f => ({ ...f, _id: f.id })));
+    await LeadNote.insertMany(INITIAL_NOTES.map(n => ({ ...n, _id: n.id })));
+    await SystemSettings.create({ ...DEFAULT_SETTINGS, _id: 'settings' });
 
     const totalUsersInDb = await User.countDocuments();
     const totalLeadsInDb = await Lead.countDocuments();
@@ -69,10 +35,9 @@ export async function GET() {
       message: 'MongoDB Atlas Online Database seeded successfully!',
       usersCount: totalUsersInDb,
       leadsCount: totalLeadsInDb,
-      adminEmail: 'info@aeropeak.tech',
-      userEmail: 'devatharshini@gmail.com',
     });
   } catch (error: any) {
+    console.error('Seeding failed:', error);
     return NextResponse.json(
       { status: 'error', message: error.message || 'Seeding failed' },
       { status: 500 }

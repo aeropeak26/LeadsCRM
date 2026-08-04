@@ -12,11 +12,11 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
-    const success = login(email, password);
+    const success = await login(email, password);
     if (!success) {
       setErrorMsg('Invalid email or password.');
     }

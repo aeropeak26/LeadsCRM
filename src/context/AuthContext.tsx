@@ -2,13 +2,13 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { User, UserRole } from '@/lib/types';
+import { User } from '@/lib/types';
 import { INITIAL_USERS } from '@/lib/storage/mockData';
 
 interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password?: string) => boolean;
+  login: (email: string, password?: string) => Promise<boolean>;
   logout: () => void;
   usersList: User[];
   isAdmin: boolean;
@@ -24,22 +24,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Sync usersList from localStorage CRM state if available
+  // Load users from DB on mount
   useEffect(() => {
-    const saved = localStorage.getItem('leadsquare_crm_state_v1');
-    if (saved) {
+    const loadUsers = async () => {
       try {
-        const parsed = JSON.parse(saved);
-        if (parsed.users && Array.isArray(parsed.users)) {
-          setUsersList(parsed.users);
+        const res = await fetch('/api/users');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setUsersList(data);
+          }
         }
       } catch (e) {
         console.error('Failed to load users for auth', e);
       }
-    }
+    };
+    loadUsers();
   }, []);
 
-  // Restore authenticated session from localStorage
+  // Restore authenticated session from localStorage ID matching with usersList
   useEffect(() => {
     const isAuth = localStorage.getItem('leadsquare_is_authenticated') === 'true';
     const savedUserId = localStorage.getItem('leadsquare_auth_user');
@@ -50,11 +53,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setCurrentUser(found);
         setIsAuthenticated(true);
       } else {
-        // If we have loaded the full usersList (not just initial) and user is still not found, log out.
-        // Wait, since this runs when usersList changes, we might just be waiting for the real usersList to load.
-        // To be safe, if we don't find them, we just don't authenticate them right now.
-        setIsAuthenticated(false);
-        setCurrentUser(null);
+        // If they have an ID but it's not in the list, just set auth false for now
+        // This is safe since usersList might be empty initially before fetch
+        if (usersList.length > 0) {
+          setIsAuthenticated(false);
+          setCurrentUser(null);
+        }
       }
     } else {
       setIsAuthenticated(false);
@@ -69,30 +73,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, pathname, router]);
 
-  const login = (email: string, password?: string): boolean => {
+  const login = async (email: string, password?: string): Promise<boolean> => {
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Read current users from localStorage
+    // Re-fetch to ensure we have latest users (if a new one was created in another tab)
     let currentRoster = usersList;
-    const savedCRMState = localStorage.getItem('leadsquare_crm_state_v1');
-    if (savedCRMState) {
-      try {
-        const parsed = JSON.parse(savedCRMState);
-        if (parsed.users && Array.isArray(parsed.users)) {
-          currentRoster = parsed.users;
-        }
-      } catch (e) {}
-    }
+    try {
+      const res = await fetch('/api/users');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) currentRoster = data;
+      }
+    } catch(e) {}
 
     const found = currentRoster.find((u) => u.email.toLowerCase().trim() === normalizedEmail);
 
     if (found) {
-      // If a password is provided (which we now require), check it
       if (password) {
         if (!found.password) {
           // Fallback for mock/legacy users without passwords set
           if (found.email === 'info@aeropeak.tech' && password !== 'AeroPeak@26') return false;
-          if (found.email === 'devatharshini@gmail.com' && password !== 'Deva@26') return false;
+          if (found.email === 'tharshinisaravanan06@gmail.com' && password !== 'Deva@26') return false;
+          if (found.email === 'nivethav012@gmail.com' && password !== 'Nive@26') return false;
         } else {
           // Check actual password if set in DB
           if (found.password !== password) {
@@ -142,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

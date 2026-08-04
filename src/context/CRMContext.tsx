@@ -12,14 +12,8 @@ import {
   ParsedLeadRecord,
   FilterOptions,
 } from '@/lib/types';
-import {
-  INITIAL_LEADS,
-  INITIAL_NOTES,
-  INITIAL_FOLLOWUPS,
-  INITIAL_USERS,
-  DEFAULT_SETTINGS,
-} from '@/lib/storage/mockData';
 import { useAuth } from './AuthContext';
+import { DEFAULT_SETTINGS } from '@/lib/storage/mockData';
 
 interface CRMContextType {
   leads: Lead[];
@@ -32,22 +26,22 @@ interface CRMContextType {
   setFilters: React.Dispatch<React.SetStateAction<FilterOptions>>;
   
   // Actions
-  addLead: (lead: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateLead: (id: string, updates: Partial<Lead>) => void;
-  deleteLead: (id: string) => void;
-  assignLeads: (leadIds: string[], userId: string | null) => void;
-  autoDistributeLeads: (leadIds: string[]) => void;
+  addLead: (lead: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
+  deleteLead: (id: string) => Promise<void>;
+  assignLeads: (leadIds: string[], userId: string | null) => Promise<void>;
+  autoDistributeLeads: (leadIds: string[]) => Promise<void>;
   
-  addNote: (leadId: string, noteText: string, newStatus?: LeadStatus) => void;
-  scheduleFollowup: (leadId: string, dateStr: string, noteText: string) => void;
-  updateFollowupStatus: (followupId: string, status: 'completed' | 'pending' | 'overdue') => void;
+  addNote: (leadId: string, noteText: string, newStatus?: LeadStatus) => Promise<void>;
+  scheduleFollowup: (leadId: string, dateStr: string, noteText: string) => Promise<void>;
+  updateFollowupStatus: (followupId: string, status: 'completed' | 'pending' | 'overdue') => Promise<void>;
   
-  importExcelRecords: (records: ParsedLeadRecord[], filename: string) => void;
+  importExcelRecords: (records: ParsedLeadRecord[], filename: string) => Promise<void>;
   
-  addUser: (user: Omit<User, 'id' | 'createdAt'>) => void;
-  updateUser: (id: string, updates: Partial<User>) => void;
-  deleteUser: (id: string) => void;
-  updateSettings: (newSettings: Partial<SystemSettings>) => void;
+  addUser: (user: Omit<User, 'id' | 'createdAt'>) => Promise<void>;
+  updateUser: (id: string, updates: Partial<User>) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
+  updateSettings: (newSettings: Partial<SystemSettings>) => Promise<void>;
   
   // Statistics Helper
   getDashboardStats: () => {
@@ -66,15 +60,13 @@ interface CRMContextType {
 
 const CRMContext = createContext<CRMContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY = 'leadsquare_crm_state_v1';
-
 export function CRMProvider({ children }: { children: React.ReactNode }) {
   const { currentUser } = useAuth();
 
-  const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS);
-  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
-  const [notes, setNotes] = useState<LeadNote[]>(INITIAL_NOTES);
-  const [followups, setFollowups] = useState<Followup[]>(INITIAL_FOLLOWUPS);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [notes, setNotes] = useState<LeadNote[]>([]);
+  const [followups, setFollowups] = useState<Followup[]>([]);
   const [uploads, setUploads] = useState<ExcelUpload[]>([]);
   const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
 
@@ -88,202 +80,245 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     dateTo: '',
   });
 
-  // Load state from Local Storage if present
+  // Load state from Database
   useEffect(() => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (saved) {
+    const loadData = async () => {
       try {
-        const parsed = JSON.parse(saved);
-        if (parsed.leads) setLeads(parsed.leads);
-        if (parsed.users) setUsers(parsed.users);
-        if (parsed.notes) setNotes(parsed.notes);
-        if (parsed.followups) setFollowups(parsed.followups);
-        if (parsed.uploads) setUploads(parsed.uploads);
-        if (parsed.settings) setSettings(parsed.settings);
+        const res = await fetch('/api/sync');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.leads) setLeads(data.leads);
+          if (data.users) setUsers(data.users);
+          if (data.notes) setNotes(data.notes);
+          if (data.followups) setFollowups(data.followups);
+          if (data.settings) setSettings(data.settings);
+        }
       } catch (e) {
-        console.error('Failed to parse CRM state from Local Storage', e);
+        console.error('Failed to sync CRM state from DB', e);
       }
-    }
+    };
+    loadData();
+    
+    // Optional: Auto-refresh data every 30 seconds to keep clients in sync
+    const intervalId = setInterval(loadData, 30000);
+    return () => clearInterval(intervalId);
   }, []);
 
-  // Save state to Local Storage
-  const saveState = (updatedData: {
-    leads?: Lead[];
-    users?: User[];
-    notes?: LeadNote[];
-    followups?: Followup[];
-    uploads?: ExcelUpload[];
-    settings?: SystemSettings;
-  }) => {
-    const stateToSave = {
-      leads: updatedData.leads || leads,
-      users: updatedData.users || users,
-      notes: updatedData.notes || notes,
-      followups: updatedData.followups || followups,
-      uploads: updatedData.uploads || uploads,
-      settings: updatedData.settings || settings,
-    };
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
-  };
-
-  const addLead = (leadData: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addLead = async (leadData: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>) => {
     const assignedUser = users.find((u) => u.id === leadData.assignedUserId);
-    const newLead: Lead = {
+    const newLead = {
       ...leadData,
-      id: `l-${Date.now()}`,
       assignedUserName: assignedUser ? assignedUser.name : undefined,
+    };
+    
+    // Optimistic Update
+    const tempId = `temp-l-${Date.now()}`;
+    const optimisticLead: Lead = {
+      ...newLead,
+      id: tempId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+    } as Lead;
+    setLeads([optimisticLead, ...leads]);
+
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newLead),
+      });
+      const savedLead = await res.json();
+      setLeads((prev) => prev.map((l) => (l.id === tempId ? savedLead : l)));
+    } catch (e) {
+      console.error(e);
+      setLeads((prev) => prev.filter((l) => l.id !== tempId));
+    }
+  };
+
+  const updateLead = async (id: string, updates: Partial<Lead>) => {
+    let assignedUserName = updates.assignedUserName;
+    if (updates.assignedUserId !== undefined) {
+      const userObj = users.find((u) => u.id === updates.assignedUserId);
+      assignedUserName = userObj ? userObj.name : undefined;
+    }
+    
+    const finalUpdates = {
+      ...updates,
+      ...(assignedUserName !== undefined && { assignedUserName }),
+      updatedAt: new Date().toISOString(),
     };
-    const nextLeads = [newLead, ...leads];
-    setLeads(nextLeads);
-    saveState({ leads: nextLeads });
+
+    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, ...finalUpdates } : l)));
+
+    try {
+      await fetch(`/api/leads/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(finalUpdates),
+      });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const updateLead = (id: string, updates: Partial<Lead>) => {
-    const nextLeads = leads.map((l) => {
-      if (l.id === id) {
-        let assignedUserName = l.assignedUserName;
-        if (updates.assignedUserId !== undefined) {
-          const userObj = users.find((u) => u.id === updates.assignedUserId);
-          assignedUserName = userObj ? userObj.name : undefined;
-        }
-        return {
-          ...l,
-          ...updates,
-          assignedUserName,
-          updatedAt: new Date().toISOString(),
-        };
-      }
-      return l;
-    });
-    setLeads(nextLeads);
-    saveState({ leads: nextLeads });
+  const deleteLead = async (id: string) => {
+    setLeads((prev) => prev.filter((l) => l.id !== id));
+    setNotes((prev) => prev.filter((n) => n.leadId !== id));
+    setFollowups((prev) => prev.filter((f) => f.leadId !== id));
+
+    try {
+      await fetch(`/api/leads/${id}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const deleteLead = (id: string) => {
-    const nextLeads = leads.filter((l) => l.id !== id);
-    const nextNotes = notes.filter((n) => n.leadId !== id);
-    const nextFollowups = followups.filter((f) => f.leadId !== id);
-
-    setLeads(nextLeads);
-    setNotes(nextNotes);
-    setFollowups(nextFollowups);
-    saveState({ leads: nextLeads, notes: nextNotes, followups: nextFollowups });
-  };
-
-  const assignLeads = (leadIds: string[], userId: string | null) => {
+  const assignLeads = async (leadIds: string[], userId: string | null) => {
     const userObj = users.find((u) => u.id === userId);
-    const nextLeads = leads.map((l) => {
-      if (leadIds.includes(l.id)) {
-        return {
-          ...l,
-          assignedUserId: userId,
-          assignedUserName: userObj ? userObj.name : undefined,
-          updatedAt: new Date().toISOString(),
-        };
-      }
-      return l;
-    });
-    setLeads(nextLeads);
-    saveState({ leads: nextLeads });
+    const assignedUserName = userObj ? userObj.name : undefined;
+    
+    setLeads((prev) =>
+      prev.map((l) => {
+        if (leadIds.includes(l.id)) {
+          return { ...l, assignedUserId: userId, assignedUserName, updatedAt: new Date().toISOString() };
+        }
+        return l;
+      })
+    );
+
+    // In a real app we might have a bulk update endpoint, but for now we loop
+    for (const id of leadIds) {
+      await fetch(`/api/leads/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignedUserId: userId, assignedUserName, updatedAt: new Date().toISOString() }),
+      });
+    }
   };
 
-  const autoDistributeLeads = (leadIds: string[]) => {
+  const autoDistributeLeads = async (leadIds: string[]) => {
     const activeReps = users.filter((u) => u.role === 'sales_rep' && u.status === 'active');
     if (activeReps.length === 0) return;
 
     let repIndex = 0;
-    const nextLeads = leads.map((l) => {
-      if (leadIds.includes(l.id)) {
-        const assignedRep = activeReps[repIndex % activeReps.length];
-        repIndex++;
-        return {
-          ...l,
-          assignedUserId: assignedRep.id,
-          assignedUserName: assignedRep.name,
-          updatedAt: new Date().toISOString(),
-        };
-      }
-      return l;
-    });
-    setLeads(nextLeads);
-    saveState({ leads: nextLeads });
+    const updatesMap = new Map<string, any>();
+
+    setLeads((prev) =>
+      prev.map((l) => {
+        if (leadIds.includes(l.id)) {
+          const assignedRep = activeReps[repIndex % activeReps.length];
+          repIndex++;
+          const update = { assignedUserId: assignedRep.id, assignedUserName: assignedRep.name, updatedAt: new Date().toISOString() };
+          updatesMap.set(l.id, update);
+          return { ...l, ...update };
+        }
+        return l;
+      })
+    );
+
+    for (const [id, update] of updatesMap.entries()) {
+      await fetch(`/api/leads/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(update),
+      });
+    }
   };
 
-  const addNote = (leadId: string, noteText: string, newStatus?: LeadStatus) => {
+  const addNote = async (leadId: string, noteText: string, newStatus?: LeadStatus) => {
     const targetLead = leads.find((l) => l.id === leadId);
     if (!targetLead) return;
-
     const currentStatus = newStatus || targetLead.status;
-
-    const newNote: LeadNote = {
-      id: `n-${Date.now()}`,
+    const tempId = `temp-n-${Date.now()}`;
+    const newNote = {
       leadId,
-      userId: currentUser.id,
-      userName: currentUser.name,
+      userId: currentUser?.id || 'unknown',
+      userName: currentUser?.name || 'Unknown',
       note: noteText,
       statusAtTime: currentStatus,
-      createdAt: new Date().toISOString(),
     };
-
-    const nextNotes = [newNote, ...notes];
-    setNotes(nextNotes);
-
+    
+    setNotes([{ ...newNote, id: tempId, createdAt: new Date().toISOString() } as LeadNote, ...notes]);
+    
     if (newStatus && newStatus !== targetLead.status) {
       updateLead(leadId, { status: newStatus });
     }
 
-    saveState({ notes: nextNotes });
+    try {
+      const res = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newNote),
+      });
+      const savedNote = await res.json();
+      setNotes((prev) => prev.map((n) => (n.id === tempId ? savedNote : n)));
+    } catch (e) {
+      console.error(e);
+      setNotes((prev) => prev.filter((n) => n.id !== tempId));
+    }
   };
 
-  const scheduleFollowup = (leadId: string, dateStr: string, noteText: string) => {
+  const scheduleFollowup = async (leadId: string, dateStr: string, noteText: string) => {
     const lead = leads.find((l) => l.id === leadId);
     if (!lead) return;
 
-    const assignedUserId = lead.assignedUserId || currentUser.id;
+    const assignedUserId = lead.assignedUserId || currentUser?.id || 'unknown';
     const assignedUser = users.find((u) => u.id === assignedUserId);
 
-    const newFollowup: Followup = {
-      id: `f-${Date.now()}`,
+    const tempId = `temp-f-${Date.now()}`;
+    const newFollowup = {
       leadId,
       leadName: lead.name,
       leadPhone: lead.phone,
       leadCompany: lead.company || 'N/A',
       assignedUserId,
-      assignedUserName: assignedUser ? assignedUser.name : currentUser.name,
+      assignedUserName: assignedUser ? assignedUser.name : (currentUser?.name || 'Unknown'),
       scheduledAt: new Date(dateStr).toISOString(),
       notes: noteText,
       status: 'pending',
-      createdAt: new Date().toISOString(),
     };
 
-    const nextFollowups = [newFollowup, ...followups];
-    setFollowups(nextFollowups);
+    setFollowups([{ ...newFollowup, id: tempId, createdAt: new Date().toISOString() } as Followup, ...followups]);
 
-    // Update lead follow-up date and status if required
     updateLead(leadId, {
       followupDate: new Date(dateStr).toISOString(),
       status: 'follow_up',
     });
 
-    saveState({ followups: nextFollowups });
+    try {
+      const res = await fetch('/api/followups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newFollowup),
+      });
+      const savedFollowup = await res.json();
+      setFollowups((prev) => prev.map((f) => (f.id === tempId ? savedFollowup : f)));
+    } catch (e) {
+      console.error(e);
+      setFollowups((prev) => prev.filter((f) => f.id !== tempId));
+    }
   };
 
-  const updateFollowupStatus = (
+  const updateFollowupStatus = async (
     followupId: string,
     status: 'completed' | 'pending' | 'overdue'
   ) => {
-    const nextFollowups = followups.map((f) => (f.id === followupId ? { ...f, status } : f));
-    setFollowups(nextFollowups);
-    saveState({ followups: nextFollowups });
+    setFollowups((prev) => prev.map((f) => (f.id === followupId ? { ...f, status } : f)));
+    try {
+      await fetch(`/api/followups/${followupId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const importExcelRecords = (records: ParsedLeadRecord[], filename: string) => {
+  const importExcelRecords = async (records: ParsedLeadRecord[], filename: string) => {
     const validRecords = records.filter((r) => r.isValid && !r.isDuplicate);
 
-    const newLeads: Lead[] = validRecords.map((r, index) => ({
-      id: `l-imp-${Date.now()}-${index}`,
+    const newLeads = validRecords.map((r) => ({
       name: r.name,
       phone: r.phone,
       email: r.email,
@@ -295,11 +330,12 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       assignedUserId: null,
       status: 'new',
       followupDate: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
     }));
 
-    const nextLeads = [...newLeads, ...leads];
+    // Insert leads one by one or we could build a bulk insert. We will do bulk in reality, but fetch loops for now.
+    // Optimistic UI updates
+    const tempLeads = newLeads.map((l, i) => ({ ...l, id: `temp-imp-${Date.now()}-${i}`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as unknown as Lead));
+    setLeads([...tempLeads, ...leads]);
 
     const newUpload: ExcelUpload = {
       id: `u-${Date.now()}`,
@@ -308,44 +344,79 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
       importedCount: validRecords.length,
       duplicateCount: records.filter((r) => r.isDuplicate).length,
       invalidCount: records.filter((r) => !r.isValid).length,
-      uploadedBy: currentUser.name,
+      uploadedBy: currentUser?.name || 'Unknown',
       createdAt: new Date().toISOString(),
     };
+    setUploads([newUpload, ...uploads]);
 
-    const nextUploads = [newUpload, ...uploads];
-
-    setLeads(nextLeads);
-    setUploads(nextUploads);
-    saveState({ leads: nextLeads, uploads: nextUploads });
+    for (const lead of newLeads) {
+      await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lead),
+      });
+    }
+    
+    // Refresh to get real IDs
+    const res = await fetch('/api/sync');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.leads) setLeads(data.leads);
+    }
   };
 
-  const addUser = (userData: Omit<User, 'id' | 'createdAt'>) => {
-    const newUser: User = {
-      ...userData,
-      id: `u-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    const nextUsers = [...users, newUser];
-    setUsers(nextUsers);
-    saveState({ users: nextUsers });
+  const addUser = async (userData: Omit<User, 'id' | 'createdAt'>) => {
+    const tempId = `temp-u-${Date.now()}`;
+    const newUser = { ...userData };
+    setUsers([...users, { ...newUser, id: tempId, createdAt: new Date().toISOString() } as User]);
+
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser),
+      });
+      const savedUser = await res.json();
+      setUsers((prev) => prev.map((u) => (u.id === tempId ? savedUser : u)));
+    } catch (e) {
+      console.error(e);
+      setUsers((prev) => prev.filter((u) => u.id !== tempId));
+    }
   };
 
-  const updateUser = (id: string, updates: Partial<User>) => {
-    const nextUsers = users.map((u) => (u.id === id ? { ...u, ...updates } : u));
-    setUsers(nextUsers);
-    saveState({ users: nextUsers });
+  const updateUser = async (id: string, updates: Partial<User>) => {
+    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...updates } : u)));
+    try {
+      await fetch(`/api/users/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const deleteUser = (id: string) => {
-    const nextUsers = users.filter((u) => u.id !== id);
-    setUsers(nextUsers);
-    saveState({ users: nextUsers });
+  const deleteUser = async (id: string) => {
+    setUsers((prev) => prev.filter((u) => u.id !== id));
+    try {
+      await fetch(`/api/users/${id}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const updateSettings = (newSettings: Partial<SystemSettings>) => {
-    const nextSettings = { ...settings, ...newSettings };
-    setSettings(nextSettings);
-    saveState({ settings: nextSettings });
+  const updateSettings = async (newSettings: Partial<SystemSettings>) => {
+    setSettings((prev) => (prev ? { ...prev, ...newSettings } : (newSettings as SystemSettings)));
+    try {
+      await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSettings),
+      });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const getDashboardStats = () => {
@@ -420,7 +491,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
 
 export function useCRM() {
   const context = useContext(CRMContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useCRM must be used within a CRMProvider');
   }
   return context;
