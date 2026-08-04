@@ -28,40 +28,37 @@ export function parseExcelFile(
   const seenInCurrentUpload = new Set<string>();
 
   rawRows.forEach((row) => {
-    // Map column variations flexible matching
-    const name = String(
-      row['Name'] || row['Full Name'] || row['Customer Name'] || row['name'] || ''
-    ).trim();
+    // Find keys case-insensitively
+    const rowKeys = Object.keys(row);
 
-    const phoneRaw = String(
-      row['Mobile Number'] || row['Mobile'] || row['Phone'] || row['Phone Number'] || row['Contact'] || row['phone'] || ''
-    ).trim();
+    const getValueByKeys = (possibleKeys: string[]) => {
+      // Direct exact check
+      for (const k of possibleKeys) {
+        if (row[k] !== undefined && String(row[k]).trim() !== '') {
+          return String(row[k]).trim();
+        }
+      }
+      // Case-insensitive substring fallback check
+      for (const k of possibleKeys) {
+        const foundKey = rowKeys.find((rk) => rk.toLowerCase().includes(k.toLowerCase()));
+        if (foundKey && row[foundKey] !== undefined && String(row[foundKey]).trim() !== '') {
+          return String(row[foundKey]).trim();
+        }
+      }
+      return '';
+    };
 
-    const email = String(
-      row['Email'] || row['Email Address'] || row['email'] || ''
-    ).trim();
+    // Smart Column Header Mapping: Title, Name, Phone, Mobile, Email, Company, City, State, Address, Remarks
+    const name = getValueByKeys(['Title', 'title', 'Name', 'name', 'Full Name', 'Customer Name', 'Customer', 'firstName']);
+    const phoneRaw = getValueByKeys(['Phone', 'phone', 'Mobile Number', 'Mobile', 'mobile', 'Contact', 'Phone Number', 'Contact Number']);
+    const email = getValueByKeys(['Email', 'email', 'Email Address']);
+    const company = getValueByKeys(['Company', 'company', 'Company Name', 'Organization']);
+    const city = getValueByKeys(['City', 'city', 'Location']);
+    const state = getValueByKeys(['State', 'state', 'Region']);
+    const address = getValueByKeys(['Address', 'address', 'Street']);
+    const remarks = getValueByKeys(['Remarks', 'remarks', 'Notes', 'Comment']);
 
-    const company = String(
-      row['Company Name'] || row['Company'] || row['Organization'] || row['company'] || ''
-    ).trim();
-
-    const city = String(
-      row['City'] || row['Location'] || row['city'] || ''
-    ).trim();
-
-    const state = String(
-      row['State'] || row['Region'] || row['state'] || ''
-    ).trim();
-
-    const address = String(
-      row['Address'] || row['Street'] || row['address'] || ''
-    ).trim();
-
-    const remarks = String(
-      row['Remarks'] || row['Notes'] || row['Comment'] || row['remarks'] || ''
-    ).trim();
-
-    // Clean phone number (strip spaces, hyphens)
+    // Clean phone number (strip spaces, hyphens, non-digits except +)
     const cleanPhone = phoneRaw.replace(/[^\d+]/g, '');
 
     // Validation checks
@@ -70,10 +67,10 @@ export function parseExcelFile(
 
     if (!name) {
       isValid = false;
-      validationError = 'Missing Customer Name';
-    } else if (!cleanPhone || cleanPhone.length < 7) {
+      validationError = 'Missing Title / Customer Name';
+    } else if (!cleanPhone || cleanPhone.length < 5) {
       isValid = false;
-      validationError = 'Invalid Mobile Number';
+      validationError = 'Invalid Phone / Mobile Number';
     }
 
     // Duplicate checks
@@ -120,8 +117,8 @@ export function parseExcelFile(
 export function exportLeadsToExcel(leads: Lead[], filename = 'LeadsSquare_Export.xlsx') {
   const exportData = leads.map((l) => ({
     'Lead ID': l.id,
-    'Customer Name': l.name,
-    'Mobile Number': l.phone,
+    'Title / Customer Name': l.name,
+    'Mobile / Phone Number': l.phone,
     Email: l.email,
     Company: l.company,
     City: l.city,
