@@ -39,6 +39,16 @@ export const INITIAL_USERS: User[] = [
     status: 'active',
     createdAt: '2026-03-05T14:20:00Z',
   },
+  {
+    id: 'u-5',
+    name: 'Nivetha',
+    email: 'nivethav012@gmail.com',
+    phone: '',
+    role: 'sales_rep',
+    status: 'active',
+    password: 'Nive@26',
+    createdAt: '2026-08-05T00:00:00Z',
+  },
 ];
 
 export const INITIAL_LEADS: Lead[] = [
