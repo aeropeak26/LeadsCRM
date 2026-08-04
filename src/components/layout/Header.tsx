@@ -2,16 +2,16 @@
 
 import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Search, Shield, Bell, User, ChevronDown, CheckCircle2, UserCheck } from 'lucide-react';
+import { Search, Bell, ChevronDown, LogOut, Mail, Phone, Shield, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCRM } from '@/context/CRMContext';
 
 export function Header() {
   const pathname = usePathname();
-  const { currentUser, switchUser, switchRole, usersList, isAdmin } = useAuth();
+  const { currentUser, logout, isAdmin } = useAuth();
   const { filters, setFilters, getDashboardStats } = useCRM();
 
-  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
   if (pathname === '/login') return null;
 
@@ -31,7 +31,7 @@ export function Header() {
         />
       </div>
 
-      {/* Action Controls & Role Switcher */}
+      {/* Action Controls & User Account Menu */}
       <div className="flex items-center space-x-4">
         {/* Follow-up Reminder Counter */}
         {stats.todayFollowups > 0 && (
@@ -41,88 +41,69 @@ export function Header() {
           </div>
         )}
 
-        {/* User Role Switcher */}
+        {/* Real User Profile Dropdown */}
         <div className="relative">
           <button
-            onClick={() => setShowRoleDropdown(!showRoleDropdown)}
+            onClick={() => setShowProfileDropdown(!showProfileDropdown)}
             className="flex items-center space-x-2.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-left transition-all"
           >
-            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
-              {currentUser?.name.charAt(0)}
+            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-800">{currentUser?.name}</p>
-              <p className="text-[10px] text-slate-500 capitalize">
+              <p className="text-xs font-bold text-slate-900 leading-none">{currentUser?.name || 'User'}</p>
+              <p className="text-[10px] text-slate-500 font-medium capitalize mt-0.5">
                 {currentUser?.role === 'admin' ? 'Admin' : 'Sales Representative'}
               </p>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
           </button>
 
-          {showRoleDropdown && (
-            <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 py-3 px-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="px-3 py-2 border-b border-slate-100 mb-2">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Simulate Role</p>
-                <p className="text-[11px] text-slate-500">Switch user role context</p>
-              </div>
-
-              <div className="px-2 pb-2 grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => {
-                    switchRole('admin');
-                    setShowRoleDropdown(false);
-                  }}
-                  className={`flex items-center justify-center space-x-1 py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all ${
-                    isAdmin
-                      ? 'bg-blue-50 border-blue-200 text-blue-700'
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <Shield className="w-3.5 h-3.5" />
-                  <span>Admin</span>
-                </button>
-                <button
-                  onClick={() => {
-                    switchRole('sales_rep');
-                    setShowRoleDropdown(false);
-                  }}
-                  className={`flex items-center justify-center space-x-1 py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all ${
-                    !isAdmin
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <UserCheck className="w-3.5 h-3.5" />
-                  <span>Sales Rep</span>
-                </button>
-              </div>
-
-              <div className="px-3 pt-2 border-t border-slate-100">
-                <p className="text-[11px] font-semibold text-slate-400 mb-1.5">Select User Account:</p>
-                <div className="space-y-1 max-h-48 overflow-y-auto">
-                  {usersList.map((user) => (
-                    <button
-                      key={user.id}
-                      onClick={() => {
-                        switchUser(user.id);
-                        setShowRoleDropdown(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
-                        user.id === currentUser?.id
-                          ? 'bg-blue-50 text-blue-700 font-semibold'
-                          : 'text-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-2 truncate">
-                        <User className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="truncate">{user.name}</span>
-                      </div>
-                      {user.id === currentUser?.id && (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 ml-1 flex-shrink-0" />
-                      )}
-                    </button>
-                  ))}
+          {showProfileDropdown && (
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150 space-y-3">
+              {/* Profile Card Header */}
+              <div className="flex items-center space-x-3 pb-3 border-b border-slate-100">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black text-sm shadow-sm">
+                  {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
                 </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-slate-900 truncate">{currentUser?.name}</p>
+                  <span
+                    className={`inline-block px-2 py-0.5 text-[9px] font-extrabold rounded-md uppercase tracking-wider ${
+                      isAdmin ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+                    }`}
+                  >
+                    {isAdmin ? 'ADMIN ACCOUNT' : 'SALES REP'}
+                  </span>
+                </div>
+              </div>
+
+              {/* User Account Info */}
+              <div className="space-y-2 text-xs text-slate-600">
+                <div className="flex items-center space-x-2 truncate">
+                  <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  <span className="truncate font-medium">{currentUser?.email}</span>
+                </div>
+                {currentUser?.phone && (
+                  <div className="flex items-center space-x-2 truncate">
+                    <Phone className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <span className="truncate font-medium">{currentUser?.phone}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Sign Out Button */}
+              <div className="pt-2 border-t border-slate-100">
+                <button
+                  onClick={() => {
+                    setShowProfileDropdown(false);
+                    logout();
+                  }}
+                  className="w-full flex items-center justify-center space-x-2 py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Sign Out</span>
+                </button>
               </div>
             </div>
           )}

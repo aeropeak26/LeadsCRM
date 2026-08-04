@@ -1,17 +1,15 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { User, UserRole } from '@/lib/types';
 import { INITIAL_USERS } from '@/lib/storage/mockData';
-import { useRouter, usePathname } from 'next/navigation';
 
 interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
-  login: (email: string, role?: UserRole) => boolean;
+  login: (email: string) => boolean;
   logout: () => void;
-  switchUser: (userId: string) => void;
-  switchRole: (role: UserRole) => void;
   usersList: User[];
   isAdmin: boolean;
   isSalesRepresentative: boolean;
@@ -20,27 +18,45 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [usersList, setUsersList] = useState<User[]>(INITIAL_USERS);
   const router = useRouter();
   const pathname = usePathname();
 
-  const [usersList] = useState<User[]>(INITIAL_USERS);
-  const [currentUser, setCurrentUser] = useState<User | null>(INITIAL_USERS[0]); // Default Admin session
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
-
-  // Load saved session
+  // Sync usersList from localStorage CRM state if available
   useEffect(() => {
-    const savedUserId = localStorage.getItem('leadsquare_auth_user');
-    const savedAuth = localStorage.getItem('leadsquare_is_authenticated');
+    const saved = localStorage.getItem('leadsquare_crm_state_v1');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.users && Array.isArray(parsed.users)) {
+          setUsersList(parsed.users);
+        }
+      } catch (e) {
+        console.error('Failed to load users for auth', e);
+      }
+    }
+  }, []);
 
-    if (savedAuth === 'false') {
-      setIsAuthenticated(false);
-      setCurrentUser(null);
-    } else if (savedUserId) {
+  // Restore authenticated session from localStorage
+  useEffect(() => {
+    const isAuth = localStorage.getItem('leadsquare_is_authenticated') === 'true';
+    const savedUserId = localStorage.getItem('leadsquare_auth_user');
+
+    if (isAuth && savedUserId) {
       const found = usersList.find((u) => u.id === savedUserId);
       if (found) {
         setCurrentUser(found);
         setIsAuthenticated(true);
+      } else {
+        // Default fallback to Admin
+        setCurrentUser(usersList[0] || INITIAL_USERS[0]);
+        setIsAuthenticated(true);
       }
+    } else {
+      setIsAuthenticated(false);
+      setCurrentUser(null);
     }
   }, [usersList]);
 
@@ -51,12 +67,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, pathname, router]);
 
-  const login = (email: string, preferredRole?: UserRole) => {
-    const found = usersList.find(
-      (u) =>
-        u.email.toLowerCase() === email.toLowerCase() ||
-        (preferredRole && u.role === preferredRole)
-    );
+  const login = (email: string): boolean => {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Read current users from localStorage
+    let currentRoster = usersList;
+    const savedCRMState = localStorage.getItem('leadsquare_crm_state_v1');
+    if (savedCRMState) {
+      try {
+        const parsed = JSON.parse(savedCRMState);
+        if (parsed.users && Array.isArray(parsed.users)) {
+          currentRoster = parsed.users;
+        }
+      } catch (e) {}
+    }
+
+    const found = currentRoster.find((u) => u.email.toLowerCase().trim() === normalizedEmail);
 
     if (found) {
       setCurrentUser(found);
@@ -67,13 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return true;
     }
 
-    // Default fallback to Admin
-    setCurrentUser(INITIAL_USERS[0]);
-    setIsAuthenticated(true);
-    localStorage.setItem('leadsquare_auth_user', INITIAL_USERS[0].id);
-    localStorage.setItem('leadsquare_is_authenticated', 'true');
-    router.push('/');
-    return true;
+    return false;
   };
 
   const logout = () => {
@@ -82,22 +102,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('leadsquare_is_authenticated', 'false');
     localStorage.removeItem('leadsquare_auth_user');
     router.push('/login');
-  };
-
-  const switchUser = (userId: string) => {
-    const found = usersList.find((u) => u.id === userId);
-    if (found) {
-      setCurrentUser(found);
-      localStorage.setItem('leadsquare_auth_user', found.id);
-    }
-  };
-
-  const switchRole = (role: UserRole) => {
-    const found = usersList.find((u) => u.role === role && u.status === 'active');
-    if (found) {
-      setCurrentUser(found);
-      localStorage.setItem('leadsquare_auth_user', found.id);
-    }
   };
 
   const isAdmin = currentUser?.role === 'admin';
@@ -110,8 +114,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated,
         login,
         logout,
-        switchUser,
-        switchRole,
         usersList,
         isAdmin,
         isSalesRepresentative,
