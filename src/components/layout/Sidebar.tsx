@@ -13,9 +13,15 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { currentUser, isAdmin, logout } = useAuth();
 
@@ -32,7 +38,20 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-60 navy-sidebar flex flex-col h-screen sticky top-0 z-30 flex-shrink-0">
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+      
+      <aside className={`
+        fixed md:sticky top-0 left-0 z-50 h-screen w-60 navy-sidebar flex flex-col flex-shrink-0 
+        transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
       {/* Brand Header */}
       <div className="p-6 border-b border-slate-800/80">
         <h1 className="text-xl font-black text-blue-500 tracking-tight">LeadSquare</h1>
@@ -81,5 +100,6 @@ export function Sidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }

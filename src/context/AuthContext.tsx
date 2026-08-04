@@ -8,7 +8,7 @@ import { INITIAL_USERS } from '@/lib/storage/mockData';
 interface AuthContextType {
   currentUser: User | null;
   isAuthenticated: boolean;
-  login: (email: string) => boolean;
+  login: (email: string, password?: string) => boolean;
   logout: () => void;
   usersList: User[];
   isAdmin: boolean;
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, pathname, router]);
 
-  const login = (email: string): boolean => {
+  const login = (email: string, password?: string): boolean => {
     const normalizedEmail = email.toLowerCase().trim();
 
     // Read current users from localStorage
@@ -85,6 +85,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const found = currentRoster.find((u) => u.email.toLowerCase().trim() === normalizedEmail);
 
     if (found) {
+      // If a password is provided (which we now require), check it
+      if (password) {
+        // Fallback for mock/legacy users without passwords set
+        if (found.email === 'info@aeropeak.tech' && password !== 'AeroPeak@26') return false;
+        if (found.email === 'devatharshini@gmail.com' && password !== 'Deva@26') return false;
+        
+        // Check actual password if set in DB
+        if (found.password && found.password !== password) {
+           return false;
+        }
+      }
+
       setCurrentUser(found);
       setIsAuthenticated(true);
       localStorage.setItem('leadsquare_auth_user', found.id);

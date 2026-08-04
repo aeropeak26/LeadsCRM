@@ -202,8 +202,8 @@ export function LeadTable() {
 
       {/* Clean White Table Grid */}
       <div className="light-card rounded-xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left text-xs min-w-[800px]">
             <thead className="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-200 uppercase text-[11px] tracking-wider">
               <tr>
                 {isAdmin && (

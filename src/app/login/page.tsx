@@ -16,16 +16,10 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg('');
 
-    if (email === 'info@aeropeak.tech' && password !== 'AeroPeak@26') {
-      setErrorMsg('Invalid password for Admin account.');
-      return;
+    const success = login(email, password);
+    if (!success) {
+      setErrorMsg('Invalid email or password.');
     }
-    if (email === 'devatharshini@gmail.com' && password !== 'Deva@26') {
-      setErrorMsg('Invalid password for User account.');
-      return;
-    }
-
-    login(email);
   };
 
   return (

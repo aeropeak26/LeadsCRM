@@ -2,11 +2,15 @@
 
 import React, { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Search, Bell, ChevronDown, LogOut, Mail, Phone, Shield, User } from 'lucide-react';
+import { Search, Bell, ChevronDown, LogOut, Mail, Phone, Shield, User, Menu } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCRM } from '@/context/CRMContext';
 
-export function Header() {
+interface HeaderProps {
+  onMenuToggle?: () => void;
+}
+
+export function Header({ onMenuToggle }: HeaderProps) {
   const pathname = usePathname();
   const { currentUser, logout, isAdmin } = useAuth();
   const { filters, setFilters, getDashboardStats } = useCRM();
@@ -18,26 +22,37 @@ export function Header() {
   const stats = getDashboardStats();
 
   return (
-    <header className="bg-white border-b border-slate-200 px-8 py-3.5 flex items-center justify-between sticky top-0 z-20 shadow-xs">
-      {/* Search Input */}
-      <div className="relative w-80">
-        <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Search name, company, or email..."
-          value={filters.search}
-          onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-          className="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 transition-all text-slate-900 placeholder:text-slate-400"
-        />
+    <header className="bg-white border-b border-slate-200 px-4 md:px-8 py-3.5 flex items-center justify-between sticky top-0 z-20 shadow-xs gap-4">
+      <div className="flex items-center space-x-3 flex-1">
+        {/* Mobile Menu Toggle */}
+        <button 
+          onClick={onMenuToggle}
+          className="md:hidden p-2 -ml-2 text-slate-500 hover:text-slate-700 focus:outline-none rounded-lg hover:bg-slate-100"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        {/* Search Input */}
+        <div className="relative w-full max-w-xs lg:max-w-md hidden sm:block">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search name, company, or email..."
+            value={filters.search}
+            onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+            className="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-600 transition-all text-slate-900 placeholder:text-slate-400"
+          />
+        </div>
       </div>
 
       {/* Action Controls & User Account Menu */}
       <div className="flex items-center space-x-4">
         {/* Follow-up Reminder Counter */}
         {stats.todayFollowups > 0 && (
-          <div className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
+          <div className="flex items-center space-x-2 px-2 md:px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
             <Bell className="w-3.5 h-3.5 text-amber-500" />
-            <span>{stats.todayFollowups} Follow-ups Today</span>
+            <span className="hidden sm:inline">{stats.todayFollowups} Follow-ups Today</span>
+            <span className="sm:hidden">{stats.todayFollowups}</span>
           </div>
         )}
 
