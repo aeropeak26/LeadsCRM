@@ -19,6 +19,7 @@ export interface User {
   phone: string;
   role: UserRole;
   status: UserStatus;
+  password?: string;
   createdAt: string;
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Plus, Trash2, X, KeyRound, CheckCircle2 } from 'lucide-react';
 import { useCRM } from '@/context/CRMContext';
 import { User, UserRole } from '@/lib/types';
 
@@ -9,10 +9,15 @@ export function UserManagement() {
   const { users, addUser, updateUser, deleteUser } = useCRM();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedUserForPassword, setSelectedUserForPassword] = useState<User | null>(null);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordSuccessMsg, setPasswordSuccessMsg] = useState('');
+
   const [newUserForm, setNewUserForm] = useState({
     name: '',
     email: '',
     phone: '',
+    password: '',
     role: 'sales_rep' as UserRole,
   });
 
@@ -22,7 +27,7 @@ export function UserManagement() {
       ...newUserForm,
       status: 'active',
     });
-    setNewUserForm({ name: '', email: '', phone: '', role: 'sales_rep' });
+    setNewUserForm({ name: '', email: '', phone: '', password: '', role: 'sales_rep' });
     setIsAddModalOpen(false);
   };
 
@@ -32,13 +37,24 @@ export function UserManagement() {
     }
   };
 
+  const handleSavePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserForPassword || !passwordInput.trim()) return;
+
+    updateUser(selectedUserForPassword.id, { password: passwordInput });
+    setPasswordSuccessMsg(`Password updated for ${selectedUserForPassword.name}!`);
+    setTimeout(() => setPasswordSuccessMsg(''), 3000);
+    setSelectedUserForPassword(null);
+    setPasswordInput('');
+  };
+
   return (
     <div className="space-y-6 max-w-7xl">
       {/* Header matching Screenshot #3 */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Users</h1>
-          <p className="text-sm text-slate-500 font-medium mt-0.5">Manage team members and access.</p>
+          <p className="text-sm text-slate-500 font-medium mt-0.5">Manage team members, login passwords, and access.</p>
         </div>
 
         <button
@@ -50,6 +66,13 @@ export function UserManagement() {
         </button>
       </div>
 
+      {passwordSuccessMsg && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center space-x-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <span>{passwordSuccessMsg}</span>
+        </div>
+      )}
+
       {/* Roster Table matching Screenshot #3 */}
       <div className="light-card rounded-xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
@@ -59,6 +82,7 @@ export function UserManagement() {
                 <th className="px-6 py-4">Name</th>
                 <th className="px-6 py-4">Email</th>
                 <th className="px-6 py-4">Role</th>
+                <th className="px-6 py-4">Password Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -78,16 +102,36 @@ export function UserManagement() {
                       {u.role === 'admin' ? 'ADMIN' : 'EMPLOYEE'}
                     </span>
                   </td>
+                  <td className="px-6 py-4">
+                    <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+                      {u.password ? '••••••••' : 'Set by user'}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 text-right">
-                    {u.role !== 'admin' && (
+                    <div className="flex items-center justify-end space-x-2">
+                      {/* Set / Reset Password Button */}
                       <button
-                        onClick={() => handleDeleteUser(u)}
-                        className="p-1.5 text-rose-500 hover:text-rose-700 rounded-lg hover:bg-rose-50 transition-colors"
-                        title="Delete User"
+                        onClick={() => {
+                          setSelectedUserForPassword(u);
+                          setPasswordInput(u.password || '');
+                        }}
+                        className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors flex items-center space-x-1"
+                        title="Set or Reset Password"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <KeyRound className="w-4 h-4" />
+                        <span className="text-[11px] font-medium hidden sm:inline">Password</span>
                       </button>
-                    )}
+
+                      {u.role !== 'admin' && (
+                        <button
+                          onClick={() => handleDeleteUser(u)}
+                          className="p-1.5 text-rose-500 hover:text-rose-700 rounded-lg hover:bg-rose-50 transition-colors"
+                          title="Delete User"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -114,7 +158,7 @@ export function UserManagement() {
                   type="text"
                   value={newUserForm.name}
                   onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
-                  className="w-full light-input rounded-xl p-2.5 text-xs"
+                  className="w-full light-input rounded-xl p-2.5 text-xs text-slate-900"
                   required
                 />
               </div>
@@ -124,7 +168,7 @@ export function UserManagement() {
                   type="email"
                   value={newUserForm.email}
                   onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
-                  className="w-full light-input rounded-xl p-2.5 text-xs"
+                  className="w-full light-input rounded-xl p-2.5 text-xs text-slate-900"
                   required
                 />
               </div>
@@ -134,7 +178,18 @@ export function UserManagement() {
                   type="text"
                   value={newUserForm.phone}
                   onChange={(e) => setNewUserForm({ ...newUserForm, phone: e.target.value })}
-                  className="w-full light-input rounded-xl p-2.5 text-xs"
+                  className="w-full light-input rounded-xl p-2.5 text-xs text-slate-900"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1 block">Set User Password *</label>
+                <input
+                  type="password"
+                  value={newUserForm.password}
+                  onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                  placeholder="Set user password (e.g. Deva@26)"
+                  className="w-full light-input rounded-xl p-2.5 text-xs text-slate-900"
                   required
                 />
               </div>
@@ -143,7 +198,7 @@ export function UserManagement() {
                 <select
                   value={newUserForm.role}
                   onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value as UserRole })}
-                  className="w-full light-input rounded-xl p-2.5 text-xs bg-white"
+                  className="w-full light-input rounded-xl p-2.5 text-xs bg-white text-slate-900"
                 >
                   <option value="sales_rep">Employee</option>
                   <option value="admin">Admin</option>
@@ -156,6 +211,50 @@ export function UserManagement() {
                 </button>
                 <button type="submit" className="px-5 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs">
                   Save User
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Set / Reset Password Modal */}
+      {selectedUserForPassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <KeyRound className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-slate-900 text-base">Set User Password</h3>
+              </div>
+              <button onClick={() => setSelectedUserForPassword(null)} className="p-1 text-slate-400 hover:text-slate-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePassword} className="p-6 space-y-4 text-xs">
+              <p className="text-slate-500 font-medium">
+                Setting login password for <span className="font-bold text-slate-900">{selectedUserForPassword.name}</span> ({selectedUserForPassword.email}):
+              </p>
+
+              <div>
+                <label className="font-semibold text-slate-600 mb-1 block">New Password *</label>
+                <input
+                  type="text"
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="e.g. Deva@26"
+                  className="w-full light-input rounded-xl p-2.5 text-xs text-slate-900 font-mono"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
+                <button type="button" onClick={() => setSelectedUserForPassword(null)} className="px-4 py-2 font-semibold text-slate-500">
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs">
+                  Save Password
                 </button>
               </div>
             </form>

@@ -8,6 +8,7 @@ export const INITIAL_USERS: User[] = [
     phone: '+91 98765 00001',
     role: 'admin',
     status: 'active',
+    password: 'AeroPeak@26',
     createdAt: '2026-01-15T09:00:00Z',
   },
   {
@@ -17,6 +18,7 @@ export const INITIAL_USERS: User[] = [
     phone: '+91 98765 00002',
     role: 'sales_rep',
     status: 'active',
+    password: 'Deva@26',
     createdAt: '2026-02-01T10:30:00Z',
   },
   {
