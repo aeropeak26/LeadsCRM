@@ -50,9 +50,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setCurrentUser(found);
         setIsAuthenticated(true);
       } else {
-        // Default fallback to Admin
-        setCurrentUser(usersList[0] || INITIAL_USERS[0]);
-        setIsAuthenticated(true);
+        // If we have loaded the full usersList (not just initial) and user is still not found, log out.
+        // Wait, since this runs when usersList changes, we might just be waiting for the real usersList to load.
+        // To be safe, if we don't find them, we just don't authenticate them right now.
+        setIsAuthenticated(false);
+        setCurrentUser(null);
       }
     } else {
       setIsAuthenticated(false);
@@ -87,13 +89,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (found) {
       // If a password is provided (which we now require), check it
       if (password) {
-        // Fallback for mock/legacy users without passwords set
-        if (found.email === 'info@aeropeak.tech' && password !== 'AeroPeak@26') return false;
-        if (found.email === 'devatharshini@gmail.com' && password !== 'Deva@26') return false;
-        
-        // Check actual password if set in DB
-        if (found.password && found.password !== password) {
-           return false;
+        if (!found.password) {
+          // Fallback for mock/legacy users without passwords set
+          if (found.email === 'info@aeropeak.tech' && password !== 'AeroPeak@26') return false;
+          if (found.email === 'devatharshini@gmail.com' && password !== 'Deva@26') return false;
+        } else {
+          // Check actual password if set in DB
+          if (found.password !== password) {
+            return false;
+          }
         }
       }
 

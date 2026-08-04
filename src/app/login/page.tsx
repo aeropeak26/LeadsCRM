@@ -50,9 +50,12 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="info@aeropeak.tech"
+                placeholder="name@company.com"
                 className="w-full pl-10 pr-4 py-2.5 text-sm light-input rounded-xl focus:ring-2 focus:ring-blue-600 transition-all text-slate-900"
                 required
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
               />
             </div>
           </div>
@@ -65,9 +68,12 @@ export default function LoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Enter your password"
                 className="w-full pl-10 pr-10 py-2.5 text-sm light-input rounded-xl focus:ring-2 focus:ring-blue-600 transition-all text-slate-900 font-mono"
                 required
+                autoComplete="current-password"
+                autoCapitalize="none"
+                autoCorrect="off"
               />
               <button
                 type="button"
