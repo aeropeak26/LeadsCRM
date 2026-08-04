@@ -2,12 +2,12 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { ShieldCheck, UserCheck, Lock, Mail, ArrowRight, Briefcase, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Briefcase, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [email, setEmail] = useState('info@aeropeak.tech');
-  const [password, setPassword] = useState('AeroPeak@26');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -17,11 +17,11 @@ export default function LoginPage() {
     setErrorMsg('');
 
     if (email === 'info@aeropeak.tech' && password !== 'AeroPeak@26') {
-      setErrorMsg('Invalid password for Admin account. Expected: AeroPeak@26');
+      setErrorMsg('Invalid password for Admin account.');
       return;
     }
     if (email === 'devatharshini@gmail.com' && password !== 'Deva@26') {
-      setErrorMsg('Invalid password for User account. Expected: Deva@26');
+      setErrorMsg('Invalid password for User account.');
       return;
     }
 
@@ -96,9 +96,6 @@ export default function LoginPage() {
               />
               <span>Remember me</span>
             </label>
-            <a href="#" className="text-blue-600 hover:underline font-semibold">
-              Forgot password?
-            </a>
           </div>
 
           <button
@@ -109,51 +106,6 @@ export default function LoginPage() {
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
-
-        {/* Preset Quick Login Buttons */}
-        <div className="pt-4 border-t border-slate-100 space-y-3">
-          <p className="text-[11px] font-semibold uppercase text-slate-400 tracking-wider text-center">
-            Quick Logins (Exact Accounts)
-          </p>
-
-          <div className="grid grid-cols-1 gap-2.5">
-            <button
-              onClick={() => {
-                setEmail('info@aeropeak.tech');
-                setPassword('AeroPeak@26');
-                login('info@aeropeak.tech', 'admin');
-              }}
-              className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 text-slate-800 rounded-xl text-xs font-semibold transition-all border border-slate-200 text-left"
-            >
-              <div className="flex items-center space-x-2.5">
-                <ShieldCheck className="w-4 h-4 text-blue-600" />
-                <div>
-                  <p className="font-bold text-slate-900">Admin: info@aeropeak.tech</p>
-                  <p className="text-[10px] text-slate-500">Password: AeroPeak@26</p>
-                </div>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-bold">ADMIN</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setEmail('devatharshini@gmail.com');
-                setPassword('Deva@26');
-                login('devatharshini@gmail.com', 'sales_rep');
-              }}
-              className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 text-slate-800 rounded-xl text-xs font-semibold transition-all border border-slate-200 text-left"
-            >
-              <div className="flex items-center space-x-2.5">
-                <UserCheck className="w-4 h-4 text-emerald-600" />
-                <div>
-                  <p className="font-bold text-slate-900">User: devatharshini@gmail.com</p>
-                  <p className="text-[10px] text-slate-500">Password: Deva@26</p>
-                </div>
-              </div>
-              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold">USER</span>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

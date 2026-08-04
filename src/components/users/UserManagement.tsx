@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2, X, KeyRound, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, X, KeyRound, CheckCircle2, Eye, EyeOff, Edit2 } from 'lucide-react';
 import { useCRM } from '@/context/CRMContext';
 import { User, UserRole } from '@/lib/types';
 
@@ -9,14 +9,25 @@ export function UserManagement() {
   const { users, addUser, updateUser, deleteUser } = useCRM();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState<User | null>(null);
   const [selectedUserForPassword, setSelectedUserForPassword] = useState<User | null>(null);
+
   const [passwordInput, setPasswordInput] = useState('');
   const [showPasswordInModal, setShowPasswordInModal] = useState(false);
   const [showAddUserPassword, setShowAddUserPassword] = useState(false);
+  const [showEditUserPassword, setShowEditUserPassword] = useState(false);
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
-  const [passwordSuccessMsg, setPasswordSuccessMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const [newUserForm, setNewUserForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: 'sales_rep' as UserRole,
+  });
+
+  const [editUserForm, setEditUserForm] = useState({
     name: '',
     email: '',
     phone: '',
@@ -32,11 +43,36 @@ export function UserManagement() {
     });
     setNewUserForm({ name: '', email: '', phone: '', password: '', role: 'sales_rep' });
     setIsAddModalOpen(false);
+    setSuccessMsg('New user created successfully!');
+    setTimeout(() => setSuccessMsg(''), 3000);
+  };
+
+  const handleEditClick = (user: User) => {
+    setSelectedUserForEdit(user);
+    setEditUserForm({
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '',
+      password: user.password || '',
+      role: user.role,
+    });
+  };
+
+  const handleEditUserSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserForEdit) return;
+
+    updateUser(selectedUserForEdit.id, editUserForm);
+    setSelectedUserForEdit(null);
+    setSuccessMsg(`User profile updated for ${editUserForm.name}!`);
+    setTimeout(() => setSuccessMsg(''), 3000);
   };
 
   const handleDeleteUser = (user: User) => {
     if (confirm(`Are you sure you want to delete user ${user.name}?`)) {
       deleteUser(user.id);
+      setSuccessMsg(`User ${user.name} deleted.`);
+      setTimeout(() => setSuccessMsg(''), 3000);
     }
   };
 
@@ -45,8 +81,8 @@ export function UserManagement() {
     if (!selectedUserForPassword || !passwordInput.trim()) return;
 
     updateUser(selectedUserForPassword.id, { password: passwordInput });
-    setPasswordSuccessMsg(`Password updated for ${selectedUserForPassword.name}!`);
-    setTimeout(() => setPasswordSuccessMsg(''), 3000);
+    setSuccessMsg(`Password updated for ${selectedUserForPassword.name}!`);
+    setTimeout(() => setSuccessMsg(''), 3000);
     setSelectedUserForPassword(null);
     setPasswordInput('');
   };
@@ -64,7 +100,7 @@ export function UserManagement() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Users</h1>
-          <p className="text-sm text-slate-500 font-medium mt-0.5">Manage team members, login passwords, and access.</p>
+          <p className="text-sm text-slate-500 font-medium mt-0.5">Manage team members, email addresses, passwords, and roles.</p>
         </div>
 
         <button
@@ -76,10 +112,10 @@ export function UserManagement() {
         </button>
       </div>
 
-      {passwordSuccessMsg && (
+      {successMsg && (
         <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center space-x-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          <span>{passwordSuccessMsg}</span>
+          <span>{successMsg}</span>
         </div>
       )}
 
@@ -130,7 +166,17 @@ export function UserManagement() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end space-x-2">
+                      <div className="flex items-center justify-end space-x-1.5">
+                        {/* Edit User Button */}
+                        <button
+                          onClick={() => handleEditClick(u)}
+                          className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors flex items-center space-x-1"
+                          title="Edit User Profile"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                          <span className="text-[11px] font-medium hidden sm:inline">Edit</span>
+                        </button>
+
                         {/* Set / Reset Password Button */}
                         <button
                           onClick={() => {
@@ -244,6 +290,99 @@ export function UserManagement() {
                 </button>
                 <button type="submit" className="px-5 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs">
                   Save User
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {selectedUserForEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Edit2 className="w-4 h-4 text-blue-600" />
+                <h3 className="font-bold text-slate-900 text-base">Edit User Profile</h3>
+              </div>
+              <button onClick={() => setSelectedUserForEdit(null)} className="p-1 text-slate-400 hover:text-slate-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditUserSubmit} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="font-semibold text-slate-600 mb-1 block">Full Name *</label>
+                <input
+                  type="text"
+                  value={editUserForm.name}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, name: e.target.value })}
+                  className="w-full light-input rounded-xl p-2.5 text-xs text-slate-900"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-600 mb-1 block">Email Address *</label>
+                <input
+                  type="email"
+                  value={editUserForm.email}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, email: e.target.value })}
+                  className="w-full light-input rounded-xl p-2.5 text-xs text-slate-900"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-600 mb-1 block">Phone Number *</label>
+                <input
+                  type="text"
+                  value={editUserForm.phone}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, phone: e.target.value })}
+                  className="w-full light-input rounded-xl p-2.5 text-xs text-slate-900"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-600 mb-1 block">Password</label>
+                <div className="relative">
+                  <input
+                    type={showEditUserPassword ? 'text' : 'password'}
+                    value={editUserForm.password}
+                    onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })}
+                    placeholder="Leave blank to keep existing password"
+                    className="w-full light-input rounded-xl p-2.5 pr-10 text-xs text-slate-900 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditUserPassword(!showEditUserPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                  >
+                    {showEditUserPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-600 mb-1 block">Role</label>
+                <select
+                  value={editUserForm.role}
+                  onChange={(e) => setEditUserForm({ ...editUserForm, role: e.target.value as UserRole })}
+                  className="w-full light-input rounded-xl p-2.5 text-xs bg-white text-slate-900"
+                >
+                  <option value="sales_rep">Employee</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
+                <button type="button" onClick={() => setSelectedUserForEdit(null)} className="px-4 py-2 font-semibold text-slate-500">
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2 font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-xs">
+                  Update User
                 </button>
               </div>
             </form>
