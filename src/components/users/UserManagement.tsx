@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2, X, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, X, KeyRound, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { useCRM } from '@/context/CRMContext';
 import { User, UserRole } from '@/lib/types';
 
@@ -11,6 +11,9 @@ export function UserManagement() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedUserForPassword, setSelectedUserForPassword] = useState<User | null>(null);
   const [passwordInput, setPasswordInput] = useState('');
+  const [showPasswordInModal, setShowPasswordInModal] = useState(false);
+  const [showAddUserPassword, setShowAddUserPassword] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
   const [passwordSuccessMsg, setPasswordSuccessMsg] = useState('');
 
   const [newUserForm, setNewUserForm] = useState({
@@ -48,6 +51,13 @@ export function UserManagement() {
     setPasswordInput('');
   };
 
+  const toggleUserPasswordVisibility = (id: string) => {
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
   return (
     <div className="space-y-6 max-w-7xl">
       {/* Header matching Screenshot #3 */}
@@ -82,59 +92,73 @@ export function UserManagement() {
                 <th className="px-6 py-4">Name</th>
                 <th className="px-6 py-4">Email</th>
                 <th className="px-6 py-4">Role</th>
-                <th className="px-6 py-4">Password Status</th>
+                <th className="px-6 py-4">Password</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/80 text-slate-700 bg-white">
-              {users.map((u) => (
-                <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="px-6 py-4 font-bold text-slate-900">{u.name}</td>
-                  <td className="px-6 py-4 text-slate-600 font-medium">{u.email}</td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-3 py-1 text-[10px] font-extrabold rounded-full uppercase tracking-wider ${
-                        u.role === 'admin'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-100 text-slate-600 border border-slate-200'
-                      }`}
-                    >
-                      {u.role === 'admin' ? 'ADMIN' : 'EMPLOYEE'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded border border-slate-200">
-                      {u.password ? '••••••••' : 'Set by user'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end space-x-2">
-                      {/* Set / Reset Password Button */}
-                      <button
-                        onClick={() => {
-                          setSelectedUserForPassword(u);
-                          setPasswordInput(u.password || '');
-                        }}
-                        className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors flex items-center space-x-1"
-                        title="Set or Reset Password"
+              {users.map((u) => {
+                const isPassVisible = !!visiblePasswords[u.id];
+                return (
+                  <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-6 py-4 font-bold text-slate-900">{u.name}</td>
+                    <td className="px-6 py-4 text-slate-600 font-medium">{u.email}</td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-3 py-1 text-[10px] font-extrabold rounded-full uppercase tracking-wider ${
+                          u.role === 'admin'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200'
+                        }`}
                       >
-                        <KeyRound className="w-4 h-4" />
-                        <span className="text-[11px] font-medium hidden sm:inline">Password</span>
-                      </button>
-
-                      {u.role !== 'admin' && (
+                        {u.role === 'admin' ? 'ADMIN' : 'EMPLOYEE'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-[11px] font-mono text-slate-800 bg-slate-100 px-2 py-1 rounded border border-slate-200 font-bold">
+                          {isPassVisible ? (u.password || 'N/A') : '••••••••'}
+                        </span>
                         <button
-                          onClick={() => handleDeleteUser(u)}
-                          className="p-1.5 text-rose-500 hover:text-rose-700 rounded-lg hover:bg-rose-50 transition-colors"
-                          title="Delete User"
+                          type="button"
+                          onClick={() => toggleUserPasswordVisibility(u.id)}
+                          className="text-slate-400 hover:text-slate-700 p-1"
+                          title={isPassVisible ? 'Hide Password' : 'Show Password'}
                         >
-                          <Trash2 className="w-4 h-4" />
+                          {isPassVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                         </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end space-x-2">
+                        {/* Set / Reset Password Button */}
+                        <button
+                          onClick={() => {
+                            setSelectedUserForPassword(u);
+                            setPasswordInput(u.password || '');
+                            setShowPasswordInModal(true);
+                          }}
+                          className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors flex items-center space-x-1"
+                          title="Set or Reset Password"
+                        >
+                          <KeyRound className="w-4 h-4" />
+                          <span className="text-[11px] font-medium hidden sm:inline">Password</span>
+                        </button>
+
+                        {u.role !== 'admin' && (
+                          <button
+                            onClick={() => handleDeleteUser(u)}
+                            className="p-1.5 text-rose-500 hover:text-rose-700 rounded-lg hover:bg-rose-50 transition-colors"
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -184,14 +208,23 @@ export function UserManagement() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-slate-600 mb-1 block">Set User Password *</label>
-                <input
-                  type="password"
-                  value={newUserForm.password}
-                  onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
-                  placeholder="Set user password (e.g. Deva@26)"
-                  className="w-full light-input rounded-xl p-2.5 text-xs text-slate-900"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showAddUserPassword ? 'text' : 'password'}
+                    value={newUserForm.password}
+                    onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                    placeholder="Set user password (e.g. Deva@26)"
+                    className="w-full light-input rounded-xl p-2.5 pr-10 text-xs text-slate-900 font-mono"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAddUserPassword(!showAddUserPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                  >
+                    {showAddUserPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="text-xs font-semibold text-slate-600 mb-1 block">Role</label>
@@ -239,14 +272,23 @@ export function UserManagement() {
 
               <div>
                 <label className="font-semibold text-slate-600 mb-1 block">New Password *</label>
-                <input
-                  type="text"
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder="e.g. Deva@26"
-                  className="w-full light-input rounded-xl p-2.5 text-xs text-slate-900 font-mono"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showPasswordInModal ? 'text' : 'password'}
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    placeholder="e.g. Deva@26"
+                    className="w-full light-input rounded-xl p-2.5 pr-10 text-xs text-slate-900 font-mono"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordInModal(!showPasswordInModal)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                  >
+                    {showPasswordInModal ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-3 pt-3 border-t border-slate-100">
