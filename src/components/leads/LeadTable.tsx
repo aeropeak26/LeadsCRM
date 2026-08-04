@@ -218,7 +218,7 @@ export function LeadTable() {
                   </th>
                 )}
                 <th className="px-5 py-3.5">Name</th>
-                <th className="px-5 py-3.5">Company</th>
+                <th className="px-5 py-3.5">Phone</th>
                 <th className="px-5 py-3.5">Status</th>
                 <th className="px-5 py-3.5">Source</th>
                 <th className="px-5 py-3.5">Assignee</th>
@@ -256,8 +256,7 @@ export function LeadTable() {
                     )}
 
                     <td className="px-5 py-3.5 font-bold text-slate-900">{lead.name}</td>
-
-                    <td className="px-5 py-3.5 text-slate-600 font-medium">{lead.company || '—'}</td>
+                    <td className="px-5 py-3.5 text-slate-600 font-medium">{lead.phone || '—'}</td>
 
                     <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
                       <select
