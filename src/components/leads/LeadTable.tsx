@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   Plus,
@@ -13,6 +13,8 @@ import {
   FileSpreadsheet,
   X,
   Trash2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Lead, LeadStatus } from '@/lib/types';
 import { useCRM } from '@/context/CRMContext';
@@ -30,6 +32,10 @@ export function LeadTable() {
 
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const [newLeadForm, setNewLeadForm] = useState({
     name: '',
@@ -67,6 +73,18 @@ export function LeadTable() {
       return true;
     });
   }, [leads, filters, isAdmin, currentUser?.id]);
+
+  // Reset pagination when filters or pageSize change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
+
+  const paginatedLeads = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredLeads.slice(start, start + pageSize);
+  }, [filteredLeads, currentPage, pageSize]);
 
   const handleSelectAll = () => {
     if (selectedLeadIds.length === filteredLeads.length) {
@@ -109,6 +127,9 @@ export function LeadTable() {
     });
     setIsCreateModalOpen(false);
   };
+
+  const startIndex = (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(filteredLeads.length, currentPage * pageSize);
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -206,14 +227,14 @@ export function LeadTable() {
             </thead>
 
             <tbody className="divide-y divide-slate-200/80 text-slate-700 bg-white">
-              {filteredLeads.length === 0 ? (
+              {paginatedLeads.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="text-center py-12 text-slate-400">
                     No leads found matching your criteria.
                   </td>
                 </tr>
               ) : (
-                filteredLeads.map((lead) => (
+                paginatedLeads.map((lead) => (
                   <tr
                     key={lead.id}
                     className="hover:bg-slate-50/80 transition-colors cursor-pointer"
@@ -279,6 +300,59 @@ export function LeadTable() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Bar */}
+        {filteredLeads.length > 0 && (
+          <div className="px-5 py-3.5 bg-slate-50/80 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4 text-xs font-medium text-slate-600">
+            <div>
+              Showing <span className="font-bold text-slate-900">{startIndex}</span> to{' '}
+              <span className="font-bold text-slate-900">{endIndex}</span> of{' '}
+              <span className="font-bold text-slate-900">{filteredLeads.length}</span> leads
+            </div>
+
+            <div className="flex items-center space-x-4">
+              {/* Page Size Selector */}
+              <div className="flex items-center space-x-2">
+                <span className="text-slate-500">Rows per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+
+              {/* Prev / Next Pagination Controls */}
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Previous Page"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800">
+                  Page {currentPage} of {totalPages}
+                </span>
+
+                <button
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Next Page"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* New Lead Modal */}

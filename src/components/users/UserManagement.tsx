@@ -6,7 +6,7 @@ import { useCRM } from '@/context/CRMContext';
 import { User, UserRole } from '@/lib/types';
 
 export function UserManagement() {
-  const { users, addUser, updateUser } = useCRM();
+  const { users, addUser, updateUser, deleteUser } = useCRM();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newUserForm, setNewUserForm] = useState({
@@ -26,9 +26,10 @@ export function UserManagement() {
     setIsAddModalOpen(false);
   };
 
-  const handleToggleStatus = (user: User) => {
-    const nextStatus = user.status === 'active' ? 'disabled' : 'active';
-    updateUser(user.id, { status: nextStatus });
+  const handleDeleteUser = (user: User) => {
+    if (confirm(`Are you sure you want to delete user ${user.name}?`)) {
+      deleteUser(user.id);
+    }
   };
 
   return (
@@ -80,7 +81,7 @@ export function UserManagement() {
                   <td className="px-6 py-4 text-right">
                     {u.role !== 'admin' && (
                       <button
-                        onClick={() => handleToggleStatus(u)}
+                        onClick={() => handleDeleteUser(u)}
                         className="p-1.5 text-rose-500 hover:text-rose-700 rounded-lg hover:bg-rose-50 transition-colors"
                         title="Delete User"
                       >

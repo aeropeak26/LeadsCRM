@@ -46,6 +46,7 @@ interface CRMContextType {
   
   addUser: (user: Omit<User, 'id' | 'createdAt'>) => void;
   updateUser: (id: string, updates: Partial<User>) => void;
+  deleteUser: (id: string) => void;
   updateSettings: (newSettings: Partial<SystemSettings>) => void;
   
   // Statistics Helper
@@ -335,6 +336,12 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
     saveState({ users: nextUsers });
   };
 
+  const deleteUser = (id: string) => {
+    const nextUsers = users.filter((u) => u.id !== id);
+    setUsers(nextUsers);
+    saveState({ users: nextUsers });
+  };
+
   const updateSettings = (newSettings: Partial<SystemSettings>) => {
     const nextSettings = { ...settings, ...newSettings };
     setSettings(nextSettings);
@@ -401,6 +408,7 @@ export function CRMProvider({ children }: { children: React.ReactNode }) {
         importExcelRecords,
         addUser,
         updateUser,
+        deleteUser,
         updateSettings,
         getDashboardStats,
       }}
