@@ -6,12 +6,25 @@ import { ShieldCheck, UserCheck, Lock, Mail, ArrowRight, Briefcase } from 'lucid
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [email, setEmail] = useState('admin@leadsquare.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('info@aeropeak.tech');
+  const [password, setPassword] = useState('AeroPeak@26');
   const [rememberMe, setRememberMe] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg('');
+
+    // Check credentials matching
+    if (email === 'info@aeropeak.tech' && password !== 'AeroPeak@26') {
+      setErrorMsg('Invalid password for Admin account. Expected: AeroPeak@26');
+      return;
+    }
+    if (email === 'devatharshini@gmail.com' && password !== 'Deva@26') {
+      setErrorMsg('Invalid password for User account. Expected: Deva@26');
+      return;
+    }
+
     login(email);
   };
 
@@ -27,6 +40,12 @@ export default function LoginPage() {
           <p className="text-sm text-slate-500 font-medium">Log in to your account</p>
         </div>
 
+        {errorMsg && (
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+            {errorMsg}
+          </div>
+        )}
+
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
@@ -37,8 +56,8 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@leadsquare.com"
-                className="w-full pl-10 pr-4 py-2.5 text-sm light-input rounded-xl focus:ring-2 focus:ring-blue-600 transition-all"
+                placeholder="info@aeropeak.tech"
+                className="w-full pl-10 pr-4 py-2.5 text-sm light-input rounded-xl focus:ring-2 focus:ring-blue-600 transition-all text-slate-900"
                 required
               />
             </div>
@@ -53,7 +72,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 text-sm light-input rounded-xl focus:ring-2 focus:ring-blue-600 transition-all"
+                className="w-full pl-10 pr-4 py-2.5 text-sm light-input rounded-xl focus:ring-2 focus:ring-blue-600 transition-all text-slate-900"
                 required
               />
             </div>
@@ -86,24 +105,44 @@ export default function LoginPage() {
         {/* Preset Quick Login Buttons */}
         <div className="pt-4 border-t border-slate-100 space-y-3">
           <p className="text-[11px] font-semibold uppercase text-slate-400 tracking-wider text-center">
-            Or Sign In with Demo Account
+            Quick Logins (Exact Accounts)
           </p>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-2.5">
             <button
-              onClick={() => login('admin@leadsquare.com', 'admin')}
-              className="flex items-center justify-center space-x-2 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all border border-slate-200"
+              onClick={() => {
+                setEmail('info@aeropeak.tech');
+                setPassword('AeroPeak@26');
+                login('info@aeropeak.tech', 'admin');
+              }}
+              className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 text-slate-800 rounded-xl text-xs font-semibold transition-all border border-slate-200 text-left"
             >
-              <ShieldCheck className="w-4 h-4 text-blue-600" />
-              <span>Admin Demo</span>
+              <div className="flex items-center space-x-2.5">
+                <ShieldCheck className="w-4 h-4 text-blue-600" />
+                <div>
+                  <p className="font-bold text-slate-900">Admin: info@aeropeak.tech</p>
+                  <p className="text-[10px] text-slate-500">Password: AeroPeak@26</p>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-bold">ADMIN</span>
             </button>
 
             <button
-              onClick={() => login('alex.j@leadsquare.com', 'sales_rep')}
-              className="flex items-center justify-center space-x-2 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all border border-slate-200"
+              onClick={() => {
+                setEmail('devatharshini@gmail.com');
+                setPassword('Deva@26');
+                login('devatharshini@gmail.com', 'sales_rep');
+              }}
+              className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 text-slate-800 rounded-xl text-xs font-semibold transition-all border border-slate-200 text-left"
             >
-              <UserCheck className="w-4 h-4 text-emerald-600" />
-              <span>Sales Rep Demo</span>
+              <div className="flex items-center space-x-2.5">
+                <UserCheck className="w-4 h-4 text-emerald-600" />
+                <div>
+                  <p className="font-bold text-slate-900">User: devatharshini@gmail.com</p>
+                  <p className="text-[10px] text-slate-500">Password: Deva@26</p>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold">USER</span>
             </button>
           </div>
         </div>
