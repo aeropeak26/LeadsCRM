@@ -70,6 +70,23 @@ export function LeadTable() {
         return false;
       }
 
+      if (filters.assignedUserId === 'assigned' && !lead.assignedUserId) {
+        return false;
+      }
+
+      if (filters.assignedUserId === 'unassigned' && lead.assignedUserId) {
+        return false;
+      }
+
+      if (
+        filters.assignedUserId !== 'all' &&
+        filters.assignedUserId !== 'assigned' &&
+        filters.assignedUserId !== 'unassigned' &&
+        lead.assignedUserId !== filters.assignedUserId
+      ) {
+        return false;
+      }
+
       return true;
     });
   }, [leads, filters, isAdmin, currentUser?.id]);
@@ -198,6 +215,23 @@ export function LeadTable() {
           <option value="invalid_number">Invalid Number</option>
           <option value="converted">Converted</option>
         </select>
+
+        {isAdmin && (
+          <select
+            value={filters.assignedUserId}
+            onChange={(e) => setFilters((prev) => ({ ...prev, assignedUserId: e.target.value }))}
+            className="light-input rounded-xl px-3.5 py-2 text-xs text-slate-700 bg-white"
+          >
+            <option value="all">All Assignments</option>
+            <option value="assigned">Assigned</option>
+            <option value="unassigned">Unassigned</option>
+            {users.filter(u => u.role === 'sales_rep' || u.role === 'admin').map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Clean White Table Grid */}

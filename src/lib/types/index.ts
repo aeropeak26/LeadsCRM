@@ -104,7 +104,7 @@ export interface ParsedLeadRecord {
 export interface FilterOptions {
   search: string;
   status: LeadStatus | 'all';
-  assignedUserId: string | 'all';
+  assignedUserId: string | 'all' | 'assigned' | 'unassigned';
   city: string | 'all';
   state: string | 'all';
   dateFrom: string;
